@@ -2,11 +2,13 @@
 
 BubbleGum is the new name for Resonance: voice, chat and screen sharing for small friend groups, with a light powder-blue appearance and customizable profiles.
 
-## Download BubbleGum 0.1.2
+## Download BubbleGum 0.1.3
 
-- **Windows 10/11, 64-bit:** [Download the Windows installer](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.2/Resonance-Setup-1.10.2.exe).
-- **Apple silicon Mac, macOS 13 Ventura or later:** [Download the Mac preview](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.2/BubbleGum-0.1.2-mac-arm64.dmg).
-- [Release notes and checksums](https://github.com/ShayzeBeeb/resonance-releases/releases/tag/v1.10.2).
+- **Windows 10/11, 64-bit:** [Download the Windows installer](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.3/Resonance-Setup-1.10.3.exe).
+- **Apple silicon Mac, macOS 13 Ventura or later:** [Download the Mac preview](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.3/BubbleGum-0.1.3-mac-arm64.dmg).
+- [Release notes and checksums](https://github.com/ShayzeBeeb/resonance-releases/releases/tag/v1.10.3).
+
+Version 0.1.3 restores automatic microphone volume after the quieter default in 0.1.2. Everyone in a call should update and rejoin to use the fix.
 
 The Windows installer runs for your Windows account and keeps saved local app data. Older portable copies need the installer once to enable in-app updates. Its compatibility filename keeps existing installations connected to updates.
 
@@ -18,7 +20,7 @@ On Mac, open the DMG and drag BubbleGum to Applications. This preview is not App
 
 **Mac preview:** install later Mac downloads manually. In-app updates are not enabled on Mac yet.
 
-BubbleGum uses public versions such as **0.1.2**. Windows installer filenames and GitHub tags retain a separate **1.10.x** compatibility sequence so existing Resonance installations can keep updating. The release title and installed app show the public BubbleGum version.
+BubbleGum uses public versions such as **0.1.3**. Windows installer filenames and GitHub tags retain a separate **1.10.x** compatibility sequence so existing Resonance installations can keep updating. The release title and installed app show the public BubbleGum version.
 
 The `.yml`, `.blockmap`, `.json`, and `.sig` assets support Windows in-app updating. The Mac `.sha256` file is a download checksum. To install, use the `.exe` on Windows or the `.dmg` on Mac.
 
