@@ -14,7 +14,7 @@ The installer runs for your Windows account and keeps saved local app data. Olde
 
 The app checks for updates on startup and periodically while open. Choose **Download** when notified, then **Restart to update** when ready. You can also check manually or turn automatic checks off under **Settings > Updates**. Update checks connect to GitHub; no chats or profile contents are sent.
 
-BubbleGum starts at public version **0.1.0**. This transition uses internal update version **1.10.0** so existing Resonance installations can receive it. The installed app displays BubbleGum 0.1.0.
+BubbleGum uses public versions such as **0.1.1**. Installer filenames and GitHub tags retain a separate **1.10.x** compatibility sequence so existing Resonance installations can keep updating. The release title and installed app show the public BubbleGum version.
 
 The `.yml`, `.blockmap`, `.json`, and `.sig` assets support in-app updating. You only need to run the `.exe` installer yourself.
 
