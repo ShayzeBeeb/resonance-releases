@@ -1,0 +1,267 @@
+name: Package BubbleGum Mac download
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bubblegum-mac-v1.10.2
+  cancel-in-progress: false
+
+jobs:
+  package:
+    if: github.repository == 'ShayzeBeeb/resonance-releases'
+    runs-on: macos-15
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      HOMEBREW_NO_ANALYTICS: '1'
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+    steps:
+      # This workflow packages only an already published client. It never checks
+      # out the private application source or uploads intermediate build files.
+      - name: Use Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          check-latest: false
+          package-manager-cache: false
+
+      - name: Verify Apple silicon builder and prepare tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "if(process.platform!=='darwin'||process.arch!=='arm64'||Number(process.versions.node.split('.')[0])!==24)throw Error('Expected native Apple silicon and Node.js 24');"
+          test "$(uname -m)" = arm64
+          command -v codesign
+          command -v hdiutil
+          command -v 7zz >/dev/null || brew install sevenzip
+          mkdir -p "$RUNNER_TEMP/bubblegum-mac/tools" "$RUNNER_TEMP/bubblegum-mac/input" "$RUNNER_TEMP/bubblegum-mac/public"
+          cd "$RUNNER_TEMP/bubblegum-mac/tools"
+          printf '%s\n' '{"name":"bubblegum-mac-packaging-tools","private":true,"version":"1.0.0"}' > package.json
+          npm install --save-exact --no-audit --no-fund electron@45.3.2 electron-builder@26.18.0 @electron/asar@3.4.1
+
+      - name: Retrieve and verify the published Windows client
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/bubblegum-mac/input"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+            https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.2/Resonance-Setup-1.10.2.exe \
+            --output Resonance-Setup-1.10.2.exe
+          printf '%s\n' 'ed8afd260bddd62a81844af1baf5a5018b505342984f8e3a39ef76c987cef6e0  Resonance-Setup-1.10.2.exe' | shasum -a 256 -c -
+          7zz x -t7z -y Resonance-Setup-1.10.2.exe -opayload resources/app.asar
+          test -f payload/resources/app.asar
+
+      - name: Prepare the existing client for Mac packaging
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/bubblegum-mac/tools"
+          node <<'NODE'
+          const fs=require('node:fs'),path=require('node:path'),asar=require('@electron/asar');
+          const base=path.join(process.env.RUNNER_TEMP,'bubblegum-mac');
+          const archive=path.join(base,'input/payload/resources/app.asar');
+          const app=path.join(base,'app');
+          const entries=asar.listPackage(archive);
+          for(const name of entries){
+            const relative=name.replace(/^\//,'');
+            if(relative.split(/[\\/]/).includes('..')||relative.startsWith('/')||relative.includes('\\'))throw Error('Unexpected archive path');
+            if(/\.(node|dll|exe|pdb|map|ts|tsx)$/i.test(relative)||/(^|\/)(qa|\.git|\.env|release-secrets)(\/|$)/i.test(relative))throw Error('Unexpected source or platform-specific file in client archive');
+          }
+          asar.extractAll(archive,app);
+          const manifest=JSON.parse(fs.readFileSync(path.join(app,'package.json'),'utf8'));
+          if(manifest.version!=='1.10.2'||manifest.displayVersion!=='0.1.2'||manifest.main!=='main.cjs')throw Error('Published app metadata does not match this Mac release');
+          for(const file of ['main.cjs','platform.cjs','preload.cjs','dist/index.html','assets/icon.png'])if(!fs.existsSync(path.join(app,file)))throw Error('Incomplete client runtime: '+file);
+          const entitlements=path.join(base,'entitlements.mac.plist');
+          fs.writeFileSync(entitlements,'<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.allow-jit</key><true/><key>com.apple.security.cs.disable-library-validation</key><true/><key>com.apple.security.device.audio-input</key><true/><key>com.apple.security.device.camera</key><true/></dict></plist>');
+          const config={
+            appId:'local.resonance.desktop',productName:'BubbleGum',electronVersion:'45.3.2',asar:true,npmRebuild:false,
+            directories:{app,output:path.join(base,'release'),buildResources:path.join(app,'assets')},
+            files:['**/*','!**/*.map','!**/*.ts','!**/*.tsx','!**/qa/**','!**/{test,tests,__tests__,docs}/**/*'],
+            publish:null,
+            mac:{
+              target:[{target:'dmg',arch:['arm64']}],artifactName:'BubbleGum-0.1.2-mac-arm64.dmg',
+              category:'public.app-category.social-networking',icon:path.join(app,'assets/icon.png'),minimumSystemVersion:'13.0.0',
+              identity:'-',hardenedRuntime:true,gatekeeperAssess:false,notarize:false,
+              entitlements,entitlementsInherit:entitlements,
+              extendInfo:{NSMicrophoneUsageDescription:'BubbleGum uses your microphone only for voice calls you join.',NSCameraUsageDescription:'BubbleGum uses your camera only when you turn on video in a call.',NSAudioCaptureUsageDescription:'BubbleGum shares system audio only when you choose to include audio in a screen or application stream.'}
+            },
+            dmg:{title:'BubbleGum',sign:false,contents:[{x:145,y:180},{x:415,y:180,type:'link',path:'/Applications'}]}
+          };
+          fs.writeFileSync(path.join(base,'electron-builder.json'),JSON.stringify(config,null,2));
+          console.log('Prepared the existing public client with '+entries.length+' archive entries.');
+          NODE
+
+      - name: Build and verify the Apple silicon app
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/bubblegum-mac/tools"
+          node node_modules/electron-builder/cli.js --config "$RUNNER_TEMP/bubblegum-mac/electron-builder.json" --mac dmg --arm64 --publish never
+          app="$RUNNER_TEMP/bubblegum-mac/release/mac-arm64/BubbleGum.app"
+          test "$(lipo -archs "$app/Contents/MacOS/BubbleGum")" = arm64
+          codesign --verify --deep --strict --verbose=2 "$app"
+          /usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$app/Contents/Info.plist" | grep -Fx '13.0.0'
+          hdiutil verify "$RUNNER_TEMP/bubblegum-mac/release/BubbleGum-0.1.2-mac-arm64.dmg"
+
+      - name: Run the packaged app with an isolated empty profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json, os, pathlib, subprocess
+          base=pathlib.Path(os.environ['RUNNER_TEMP'])/'bubblegum-mac'
+          profile=base/'smoke-profile'
+          env=dict(os.environ,RESONANCE_SMOKE_PROFILE=str(profile))
+          env.pop('ELECTRON_RUN_AS_NODE',None)
+          executable=base/'release/mac-arm64/BubbleGum.app/Contents/MacOS/BubbleGum'
+          subprocess.run([str(executable),'--smoke-test'],env=env,check=True,timeout=90)
+          report=json.loads((profile/'desktop-smoke.json').read_text())
+          if report.get('passed') is not True:
+            raise RuntimeError('Packaged Mac launch checks did not pass')
+          print('Packaged Mac launch, isolated storage, renderer and security checks passed.')
+          PY
+
+      - name: Prepare only the Mac download and its installation information
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/bubblegum-mac/public"
+          cp "$RUNNER_TEMP/bubblegum-mac/release/BubbleGum-0.1.2-mac-arm64.dmg" .
+          shasum -a 256 BubbleGum-0.1.2-mac-arm64.dmg > BubbleGum-0.1.2-mac-arm64.sha256
+          cat > BubbleGum-0.1.2-Mac-Readme.txt <<'README'
+          BubbleGum 0.1.2 — Apple silicon Mac preview
+
+          Requires an Apple silicon Mac and macOS 13 Ventura or later.
+          Open the DMG, drag BubbleGum to Applications, then open it from Applications.
+
+          This preview has an ad-hoc signature, not an Apple Developer ID signature,
+          and is not notarized. macOS may block the first launch. After verifying
+          this download's source, use the app-specific Open Anyway option in
+          System Settings > Privacy & Security if macOS offers it. Do not disable
+          system-wide security protections.
+          Apple's instructions: https://support.apple.com/en-us/102445
+
+          The app passed automated launch checks on an Apple silicon macOS 15
+          build machine and a separate Mac runner after transfer. These checks
+          do not reproduce browser-download quarantine approval. Physical
+          microphones, cameras, screen capture, wireless headsets and real calls
+          still need device testing. Grant microphone,
+          camera and screen-recording permissions only when using those features.
+
+          Mac automatic updates are not enabled in this preview. Install later
+          Mac downloads manually. Existing Windows updates are unchanged.
+
+          This app is packaged from the already published BubbleGum 0.1.2 client.
+          No private application source project, user profile, conversations,
+          account credentials or private community keys were uploaded for this build.
+          As with other Electron apps, the shipped client code remains extractable.
+          README
+          test "$(find . -type f | wc -l | tr -d ' ')" = 3
+          shasum -a 256 -c BubbleGum-0.1.2-mac-arm64.sha256
+
+      - name: Transfer only final Mac release files
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: bubblegum-mac-0.1.2
+          path: |
+            ${{ runner.temp }}/bubblegum-mac/public/BubbleGum-0.1.2-mac-arm64.dmg
+            ${{ runner.temp }}/bubblegum-mac/public/BubbleGum-0.1.2-mac-arm64.sha256
+            ${{ runner.temp }}/bubblegum-mac/public/BubbleGum-0.1.2-Mac-Readme.txt
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  verify-transferred-app:
+    needs: package
+    runs-on: macos-15
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Retrieve only the final Mac download on a fresh runner
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: bubblegum-mac-0.1.2
+          path: mac-download
+
+      - name: Check the transferred download and installed app
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = arm64
+          cd mac-download
+          shasum -a 256 -c BubbleGum-0.1.2-mac-arm64.sha256
+          python3 <<'PY'
+          import json, os, pathlib, subprocess, tempfile
+          base=pathlib.Path(tempfile.mkdtemp(prefix='bubblegum-mac-transfer-',dir=os.environ['RUNNER_TEMP']))
+          mount=base/'volume'
+          mount.mkdir()
+          dmg=pathlib.Path.cwd()/'BubbleGum-0.1.2-mac-arm64.dmg'
+          subprocess.run(['hdiutil','verify',str(dmg)],check=True,timeout=90)
+          subprocess.run(['hdiutil','attach','-readonly','-nobrowse','-mountpoint',str(mount),str(dmg)],check=True,timeout=90)
+          try:
+            source=mount/'BubbleGum.app'
+            subprocess.run(['codesign','--verify','--deep','--strict',str(source)],check=True,timeout=60)
+            architecture=subprocess.check_output(['lipo','-archs',str(source/'Contents/MacOS/BubbleGum')],text=True).strip()
+            if architecture!='arm64':
+              raise RuntimeError('Transferred app is not a native Apple silicon build')
+            installed=base/'installed/BubbleGum.app'
+            installed.parent.mkdir()
+            subprocess.run(['ditto',str(source),str(installed)],check=True,timeout=90)
+          finally:
+            subprocess.run(['hdiutil','detach',str(mount)],check=True,timeout=60)
+          subprocess.run(['codesign','--verify','--deep','--strict',str(installed)],check=True,timeout=60)
+          profile=base/'smoke-profile'
+          env=dict(os.environ,RESONANCE_SMOKE_PROFILE=str(profile))
+          env.pop('ELECTRON_RUN_AS_NODE',None)
+          subprocess.run([str(installed/'Contents/MacOS/BubbleGum'),'--smoke-test'],env=env,check=True,timeout=90)
+          report=json.loads((profile/'desktop-smoke.json').read_text())
+          if report.get('passed') is not True:
+            raise RuntimeError('Transferred Mac app launch checks did not pass')
+          print('Transferred app passed signature, architecture and isolated launch checks on a separate Mac runner.')
+          PY
+
+  publish:
+    needs: verify-transferred-app
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Retrieve the verified final Mac files
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: bubblegum-mac-0.1.2
+          path: mac-download
+
+      - name: Verify the release asset allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd mac-download
+          printf '%s\n' 'BubbleGum-0.1.2-Mac-Readme.txt' 'BubbleGum-0.1.2-mac-arm64.dmg' 'BubbleGum-0.1.2-mac-arm64.sha256' | sort > "$RUNNER_TEMP/expected-mac-assets.txt"
+          find . -mindepth 1 -maxdepth 1 -type f -printf '%f\n' | sort > "$RUNNER_TEMP/actual-mac-assets.txt"
+          diff -u "$RUNNER_TEMP/expected-mac-assets.txt" "$RUNNER_TEMP/actual-mac-assets.txt"
+          test "$(find . -mindepth 1 | wc -l | tr -d ' ')" = 3
+          sha256sum -c BubbleGum-0.1.2-mac-arm64.sha256
+
+      - name: Add Mac downloads to the existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view v1.10.2 --repo ShayzeBeeb/resonance-releases --json isDraft --jq '.isDraft' | grep -Fx false
+          gh release upload v1.10.2 --repo ShayzeBeeb/resonance-releases \
+            'mac-download/BubbleGum-0.1.2-mac-arm64.dmg#BubbleGum for Apple silicon Mac (preview)' \
+            'mac-download/BubbleGum-0.1.2-mac-arm64.sha256#Mac download SHA-256 checksum' \
+            'mac-download/BubbleGum-0.1.2-Mac-Readme.txt#Mac installation and preview notes'
+
