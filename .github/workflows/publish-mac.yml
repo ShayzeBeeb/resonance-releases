@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: bubblegum-mac-v1.10.2
+  group: bubblegum-mac-v1.10.3
   cancel-in-progress: false
 
 jobs:
@@ -51,10 +51,10 @@ jobs:
           set -euo pipefail
           cd "$RUNNER_TEMP/bubblegum-mac/input"
           curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
-            https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.2/Resonance-Setup-1.10.2.exe \
-            --output Resonance-Setup-1.10.2.exe
-          printf '%s\n' 'ed8afd260bddd62a81844af1baf5a5018b505342984f8e3a39ef76c987cef6e0  Resonance-Setup-1.10.2.exe' | shasum -a 256 -c -
-          7zz x -t7z -y Resonance-Setup-1.10.2.exe -opayload resources/app.asar
+            https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.3/Resonance-Setup-1.10.3.exe \
+            --output Resonance-Setup-1.10.3.exe
+          printf '%s\n' '73e8bf92166d9a9a8489a35eb34b2c1d23f7234bb2119c2319372a70c22ced8e  Resonance-Setup-1.10.3.exe' | shasum -a 256 -c -
+          7zz x -t7z -y Resonance-Setup-1.10.3.exe -opayload resources/app.asar
           test -f payload/resources/app.asar
 
       - name: Prepare the existing client for Mac packaging
@@ -75,7 +75,7 @@ jobs:
           }
           asar.extractAll(archive,app);
           const manifest=JSON.parse(fs.readFileSync(path.join(app,'package.json'),'utf8'));
-          if(manifest.version!=='1.10.2'||manifest.displayVersion!=='0.1.2'||manifest.main!=='main.cjs')throw Error('Published app metadata does not match this Mac release');
+          if(manifest.version!=='1.10.3'||manifest.displayVersion!=='0.1.3'||manifest.main!=='main.cjs')throw Error('Published app metadata does not match this Mac release');
           for(const file of ['main.cjs','platform.cjs','preload.cjs','dist/index.html','assets/icon.png'])if(!fs.existsSync(path.join(app,file)))throw Error('Incomplete client runtime: '+file);
           const entitlements=path.join(base,'entitlements.mac.plist');
           fs.writeFileSync(entitlements,'<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.allow-jit</key><true/><key>com.apple.security.cs.disable-library-validation</key><true/><key>com.apple.security.device.audio-input</key><true/><key>com.apple.security.device.camera</key><true/></dict></plist>');
@@ -85,7 +85,7 @@ jobs:
             files:['**/*','!**/*.map','!**/*.ts','!**/*.tsx','!**/qa/**','!**/{test,tests,__tests__,docs}/**/*'],
             publish:null,
             mac:{
-              target:[{target:'dmg',arch:['arm64']}],artifactName:'BubbleGum-0.1.2-mac-arm64.dmg',
+              target:[{target:'dmg',arch:['arm64']}],artifactName:'BubbleGum-0.1.3-mac-arm64.dmg',
               category:'public.app-category.social-networking',icon:path.join(app,'assets/icon.png'),minimumSystemVersion:'13.0.0',
               identity:'-',hardenedRuntime:true,gatekeeperAssess:false,notarize:false,
               entitlements,entitlementsInherit:entitlements,
@@ -107,7 +107,7 @@ jobs:
           test "$(lipo -archs "$app/Contents/MacOS/BubbleGum")" = arm64
           codesign --verify --deep --strict --verbose=2 "$app"
           /usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$app/Contents/Info.plist" | grep -Fx '13.0.0'
-          hdiutil verify "$RUNNER_TEMP/bubblegum-mac/release/BubbleGum-0.1.2-mac-arm64.dmg"
+          hdiutil verify "$RUNNER_TEMP/bubblegum-mac/release/BubbleGum-0.1.3-mac-arm64.dmg"
 
       - name: Run the packaged app with an isolated empty profile
         shell: bash
@@ -132,10 +132,10 @@ jobs:
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/bubblegum-mac/public"
-          cp "$RUNNER_TEMP/bubblegum-mac/release/BubbleGum-0.1.2-mac-arm64.dmg" .
-          shasum -a 256 BubbleGum-0.1.2-mac-arm64.dmg > BubbleGum-0.1.2-mac-arm64.sha256
-          cat > BubbleGum-0.1.2-Mac-Readme.txt <<'README'
-          BubbleGum 0.1.2 — Apple silicon Mac preview
+          cp "$RUNNER_TEMP/bubblegum-mac/release/BubbleGum-0.1.3-mac-arm64.dmg" .
+          shasum -a 256 BubbleGum-0.1.3-mac-arm64.dmg > BubbleGum-0.1.3-mac-arm64.sha256
+          cat > BubbleGum-0.1.3-Mac-Readme.txt <<'README'
+          BubbleGum 0.1.3 — Apple silicon Mac preview
 
           Requires an Apple silicon Mac and macOS 13 Ventura or later.
           Open the DMG, drag BubbleGum to Applications, then open it from Applications.
@@ -157,22 +157,22 @@ jobs:
           Mac automatic updates are not enabled in this preview. Install later
           Mac downloads manually. Existing Windows updates are unchanged.
 
-          This app is packaged from the already published BubbleGum 0.1.2 client.
+          This app is packaged from the already published BubbleGum 0.1.3 client.
           No private application source project, user profile, conversations,
           account credentials or private community keys were uploaded for this build.
           As with other Electron apps, the shipped client code remains extractable.
           README
           test "$(find . -type f | wc -l | tr -d ' ')" = 3
-          shasum -a 256 -c BubbleGum-0.1.2-mac-arm64.sha256
+          shasum -a 256 -c BubbleGum-0.1.3-mac-arm64.sha256
 
       - name: Transfer only final Mac release files
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: bubblegum-mac-0.1.2
+          name: bubblegum-mac-0.1.3
           path: |
-            ${{ runner.temp }}/bubblegum-mac/public/BubbleGum-0.1.2-mac-arm64.dmg
-            ${{ runner.temp }}/bubblegum-mac/public/BubbleGum-0.1.2-mac-arm64.sha256
-            ${{ runner.temp }}/bubblegum-mac/public/BubbleGum-0.1.2-Mac-Readme.txt
+            ${{ runner.temp }}/bubblegum-mac/public/BubbleGum-0.1.3-mac-arm64.dmg
+            ${{ runner.temp }}/bubblegum-mac/public/BubbleGum-0.1.3-mac-arm64.sha256
+            ${{ runner.temp }}/bubblegum-mac/public/BubbleGum-0.1.3-Mac-Readme.txt
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
@@ -188,7 +188,7 @@ jobs:
       - name: Retrieve only the final Mac download on a fresh runner
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
-          name: bubblegum-mac-0.1.2
+          name: bubblegum-mac-0.1.3
           path: mac-download
 
       - name: Check the transferred download and installed app
@@ -197,13 +197,13 @@ jobs:
           set -euo pipefail
           test "$(uname -m)" = arm64
           cd mac-download
-          shasum -a 256 -c BubbleGum-0.1.2-mac-arm64.sha256
+          shasum -a 256 -c BubbleGum-0.1.3-mac-arm64.sha256
           python3 <<'PY'
           import json, os, pathlib, subprocess, tempfile
           base=pathlib.Path(tempfile.mkdtemp(prefix='bubblegum-mac-transfer-',dir=os.environ['RUNNER_TEMP']))
           mount=base/'volume'
           mount.mkdir()
-          dmg=pathlib.Path.cwd()/'BubbleGum-0.1.2-mac-arm64.dmg'
+          dmg=pathlib.Path.cwd()/'BubbleGum-0.1.3-mac-arm64.dmg'
           subprocess.run(['hdiutil','verify',str(dmg)],check=True,timeout=90)
           subprocess.run(['hdiutil','attach','-readonly','-nobrowse','-mountpoint',str(mount),str(dmg)],check=True,timeout=90)
           try:
@@ -239,7 +239,7 @@ jobs:
       - name: Retrieve the verified final Mac files
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
-          name: bubblegum-mac-0.1.2
+          name: bubblegum-mac-0.1.3
           path: mac-download
 
       - name: Verify the release asset allowlist
@@ -247,11 +247,11 @@ jobs:
         run: |
           set -euo pipefail
           cd mac-download
-          printf '%s\n' 'BubbleGum-0.1.2-Mac-Readme.txt' 'BubbleGum-0.1.2-mac-arm64.dmg' 'BubbleGum-0.1.2-mac-arm64.sha256' | sort > "$RUNNER_TEMP/expected-mac-assets.txt"
+          printf '%s\n' 'BubbleGum-0.1.3-Mac-Readme.txt' 'BubbleGum-0.1.3-mac-arm64.dmg' 'BubbleGum-0.1.3-mac-arm64.sha256' | sort > "$RUNNER_TEMP/expected-mac-assets.txt"
           find . -mindepth 1 -maxdepth 1 -type f -printf '%f\n' | sort > "$RUNNER_TEMP/actual-mac-assets.txt"
           diff -u "$RUNNER_TEMP/expected-mac-assets.txt" "$RUNNER_TEMP/actual-mac-assets.txt"
           test "$(find . -mindepth 1 | wc -l | tr -d ' ')" = 3
-          sha256sum -c BubbleGum-0.1.2-mac-arm64.sha256
+          sha256sum -c BubbleGum-0.1.3-mac-arm64.sha256
 
       - name: Add Mac downloads to the existing release
         env:
@@ -259,9 +259,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release view v1.10.2 --repo ShayzeBeeb/resonance-releases --json isDraft --jq '.isDraft' | grep -Fx false
-          gh release upload v1.10.2 --repo ShayzeBeeb/resonance-releases \
-            'mac-download/BubbleGum-0.1.2-mac-arm64.dmg#BubbleGum for Apple silicon Mac (preview)' \
-            'mac-download/BubbleGum-0.1.2-mac-arm64.sha256#Mac download SHA-256 checksum' \
-            'mac-download/BubbleGum-0.1.2-Mac-Readme.txt#Mac installation and preview notes'
+          gh release view v1.10.3 --repo ShayzeBeeb/resonance-releases --json isDraft --jq '.isDraft' | grep -Fx false
+          gh release upload v1.10.3 --repo ShayzeBeeb/resonance-releases \
+            'mac-download/BubbleGum-0.1.3-mac-arm64.dmg#BubbleGum for Apple silicon Mac (preview)' \
+            'mac-download/BubbleGum-0.1.3-mac-arm64.sha256#Mac download SHA-256 checksum' \
+            'mac-download/BubbleGum-0.1.3-Mac-Readme.txt#Mac installation and preview notes'
 
