@@ -2,18 +2,18 @@
 
 BubbleGum is a voice and community chat app. This repository contains public app downloads and the Mac packaging recipe. The private development project is not published here.
 
-## Current release: 0.1.7
+## Current release: 0.1.8
 
-- [Download for Windows](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.7/Resonance-Setup-1.10.7.exe)
-- [Download for Apple silicon Mac](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.7/BubbleGum-0.1.7-mac-arm64.dmg)
-- [Mac installation notes](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.7/BubbleGum-0.1.7-Mac-Readme.txt)
-- [Release notes](https://github.com/ShayzeBeeb/resonance-releases/releases/tag/v1.10.7)
+- [Download for Windows](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.8/Resonance-Setup-1.10.8.exe)
+- [Download for Apple silicon Mac](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.8/BubbleGum-0.1.8-mac-arm64.dmg)
+- [Mac installation notes](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.8/BubbleGum-0.1.8-Mac-Readme.txt)
+- [Release notes](https://github.com/ShayzeBeeb/resonance-releases/releases/tag/v1.10.8)
 
 Choose an installer from the release assets. GitHub’s automatic “Source code” archives contain only this downloads page and the packaging recipe; they are not the app or its private development source. The compiled Electron app contains extractable client code.
 
 ## Windows
 
-Open the installer to install BubbleGum for your Windows account. Existing installations can check for updates in Settings → Updates. The app displays version 0.1.7; the installer uses compatibility version 1.10.7 so older installations can update normally. Windows publisher signing is not configured, so Windows may show an unrecognized-app warning.
+Open the installer to install BubbleGum for your Windows account. Existing installations can check for updates in Settings → Updates. The app displays version 0.1.8; the installer uses compatibility version 1.10.8 so older installations can update normally. Windows publisher signing is not configured, so Windows may show an unrecognized-app warning.
 
 ## Apple silicon Mac preview
 
