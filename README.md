@@ -5,7 +5,7 @@ BubbleGum is the new name for Resonance: voice, chat and screen sharing for smal
 ## Downloads
 
 - **Windows 10/11, 64-bit — 0.1.6:** [Download the Windows installer](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.6/Resonance-Setup-1.10.6.exe).
-- **Apple silicon Mac, macOS 13 Ventura or later — 0.1.3:** [Download the Mac preview](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.3/BubbleGum-0.1.3-mac-arm64.dmg).
+- **Apple silicon Mac, macOS 13 Ventura or later — 0.1.6:** [Download the Mac preview](https://github.com/ShayzeBeeb/resonance-releases/releases/download/v1.10.6/BubbleGum-0.1.6-mac-arm64.dmg).
 - [Windows release notes and checksums](https://github.com/ShayzeBeeb/resonance-releases/releases/tag/v1.10.6).
 
 Version 0.1.6 adds candy-inspired buttons and menus, rounded typography, and a choice of Baloo 2, Fredoka, or DynaPuff in Appearance. Fonts are included locally and work offline. It includes General UI fixes. Audio processing is unchanged from 0.1.3.
